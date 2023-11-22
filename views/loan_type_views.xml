@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="loan_type_view_tree" model="ir.ui.view">
+            <field name="name">loan.type.view.tree</field>
+            <field name="model">loan.type</field>
+            <field name="arch" type="xml">
+                <tree string="Loan Type">
+                    <field name="name"/>
+                    <field name="max_amount"/>
+                    <field name="max_installment"/>
+                    <field name="num_total_guarantor"/>
+                    <field name="num_internal_guarantor"/>
+                    <field name="num_external_guarantor"/>
+                    <field name="eligible_employee"/>
+                    <field name="state"/>
+
+
+                </tree>
+            </field>
+        </record>
+
+        <record id="loan_type_view_form" model="ir.ui.view">
+            <field name="name">loan.type.view.form</field>
+            <field name="model">loan.type</field>
+            <field name="arch" type="xml">
+                <form string="Loan Type">
+                    <header>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="draft,running,closed"/>
+                        <button name="send_to_running" states="draft,closed" string="Run" type="object"
+                                class="oe_highlight"
+                                confirm="Are you sure you want to Run ? (In running state you can not Edit or Delete the Loan Type!)"/>
+                        <button name="send_to_close" states="running" string="Close" type="object"
+                                class="oe_highlight"/>
+
+                    </header>
+
+                    <sheet>
+                        <group col='4'>
+                            <field name="name"/>
+                            <field name="max_amount"/>
+                            <field name="max_installment"/>
+                            <field name="num_total_guarantor"/>
+                            <field name="num_internal_guarantor"/>
+                            <field name="num_external_guarantor"/>
+                            <field name="eligible_employee"/>
+                            <field name="interest_rate"/>
+                        </group>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids" widget="mail_followers" groups="base.group_user"/>
+                        <field name="message_ids" widget="mail_thread"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+    </data>
+</odoo>

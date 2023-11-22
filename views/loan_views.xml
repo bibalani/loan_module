@@ -1,0 +1,556 @@
+<odoo>
+    <data>
+
+        <record forcecreate="1" id="loan_installment_sq_id" model="ir.sequence">
+            <field name="name">Loan Installment sequence id</field>
+            <field name="code">loan_installment_sq_code</field>
+            <field name="padding">6</field>
+            <field name="prefix">Loan Installment/</field>
+        </record>
+        <record forcecreate="1" id="loan_request_sq_id" model="ir.sequence">
+            <field name="name">Loan Request</field>
+            <field name="code">loan.request</field>
+            <field name="active">TRUE</field>
+            <field name="prefix">Loan-%(year)s-%(month)s-</field>
+            <field name="padding">4</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+        </record>
+        <record id="loan_view_tree" model="ir.ui.view">
+            <field name="name">loan.view.tree</field>
+            <field name="model">loan.request</field>
+            <field name="arch" type="xml">
+                <tree string='Loan'>
+                    <field name="name"/>
+
+                    <field name="requester_id"/>
+                    <field name="loan_type"/>
+                    <field name="state"/>
+
+                </tree>
+            </field>
+        </record>
+
+
+        <record id="loan_view_form" model="ir.ui.view">
+            <field name="name">loan.view.form</field>
+            <field name="model">loan.request</field>
+            <field name="arch" type="xml">
+                <form string='Loan'>
+                    <header>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="draft,welfare_review,wait_for_lm,wait_for_guarantor,wait_for_hr,wait_for_cheque,wait_for_cheque_received,wait_for_treasury,paid,close,rejected,cancel"/>
+                        <button name="button_send_request" string="Send Request" type="object" states="draft"
+                                class="oe_highlight"/>
+                        <button name="button_cancel_request" string="Cancel Request" type="object"
+                                attrs="{'invisible':['|',('state','not in',('welfare_review','wait_for_lm','wait_for_guarantor','wait_for_hr')),('check_access_loan_requester','=',False)]}"
+                                confirm="Are you sure to cancel your loan request ?" class="btn btn-danger"/>
+                        <button name="button_send_to_draft" string="Send to Draft" type="object" states="rejected"
+                                attrs="{'invisible':['|',('state','!=','rejected'),('check_access_loan_requester','=',False)]}"
+                                class="oe_highlight"/>
+
+                        <button name="button_welfare_approve" string="Approve" type="object"
+                                class="oe_highlight"
+                                attrs="{'invisible':['|',('state','!=','welfare_review'),('check_access_right_welfare_admin','=',False)]}"
+                                groups="loan.group_welfare_approver"/>
+                        <button name="button_welfare_reject" string="Reject" type="object"
+                                states="welfare_review"
+                                groups="loan.group_welfare_approver" class="btn btn-danger"/>
+
+                        <button name="button_lm_approve" string="Approve" type="object"
+                                class="oe_highlight" states="wait_for_lm"
+                                attrs="{'invisible':['|',('state','!=','wait_for_lm'),('check_access_right_line','=',False)]}"
+                                groups="ext_hr_employee.group_line_manager,loan.group_welfare_approver,loan.group_loan_admin"/>
+                        <button name="button_lm_reject" string="Reject" type="object"
+                                class="btn btn-danger" states="wait_for_lm"
+                                attrs="{'invisible':['|',('state','!=','waiting_for_lm'),('check_access_right_line','=',False)]}"
+                                groups="ext_hr_employee.group_line_manager,loan.group_welfare_approver,loan.group_loan_admin"/>
+
+                        <button name="button_send_to_hr" string="Approve" type="object"
+                                attrs="{'invisible':['|',('state','!=','wait_for_guarantor'),('check_access_loan_requester','=',False)]}"
+                                groups="loan.group_requester_loan,loan.group_loan_admin"
+                                class="oe_highlight"/>
+
+                        <button name="button_send_to_cheque" string="Approve" type="object" states="wait_for_hr"
+                                groups="loan.group_hr_welfare_approver,loan.group_loan_admin"
+                                class="oe_highlight"/>
+                        <button name="button_hr_reject" string="Reject" type="object" states="wait_for_hr"
+                                groups="loan.group_hr_welfare_approver,loan.group_loan_admin"
+                                class="btn btn-danger"/>
+
+                        <button name="button_send_to_cheque_received" string="Approve" type="object"
+                                attrs="{'invisible':['|',('state','!=','wait_for_cheque'),('check_access_loan_requester','=',False)]}"
+                                groups="loan.group_requester_loan,loan.group_welfare_approver,loan.group_loan_admin"
+                                class="oe_highlight"/>
+
+
+                        <button name="button_send_to_treasury" string="Approve" type="object"
+                                states="wait_for_cheque_received"
+                                groups="loan.group_welfare_approver,loan.group_loan_admin"
+                                class="oe_highlight"/>
+                        <button name="button_cheque_reject" string="Reject" type="object"
+                                states="wait_for_cheque_received"
+                                groups="loan.group_welfare_approver,loan.group_loan_admin"
+                                class="btn btn-danger"/>
+
+                        <button name="button_send_to_paid" string="Approve" type="object" states="wait_for_treasury"
+                                groups="loan.group_treasury_loan,loan.group_loan_admin"
+                                class="oe_highlight"/>
+                        <button name="button_treasury_reject" string="Reject" type="object" states="wait_for_treasury"
+                                groups="loan.group_treasury_loan,loan.group_loan_admin"
+                                class="btn btn-danger"/>
+                        <button name="button_force_close" string="Force Close" type="object"
+                                attrs="{'invisible':['|',('state','!=','paid'),('check_access_right_loan_admin','=',False)]}"
+                                groups="loan.group_loan_admin"
+                                class="oe_highlight"/>
+
+
+                    </header>
+                    <sheet>
+                        <group>
+                            <group string="Employee Information">
+                                <field name="check_cheque_returned" invisible="1"/>
+
+                                <field name="check_access_right_welfare_admin" invisible="1"/>
+                                <field name="check_access_right_loan_admin" invisible="1"/>
+
+                                <field name="name"/>
+
+                                <field name="requester_id"
+                                       options="{'no_create': true, 'no_edit': true,'no_open': true}"/>
+                                <field name="staff_id"/>
+                                <field name="hired_on"/>
+                                <field name="employee_company"/>
+
+                                <field name="line_manager"/>
+                                <field name="requester_contract_type"/>
+                                <field name="sheba_no"/>
+
+
+
+                                <field name="check_access_right_line" invisible="1"/>
+                                <field name="check_access_loan_requester" invisible="1"/>
+
+
+                            </group>
+                            <group string="Loan Information">
+
+                                <field name="loan_type" options="{'no_create': true, 'no_edit': true,'no_open': true}"/>
+                                <field name="loan_request_date"/>
+
+                                <field name="max_amount"/>
+                                <field name="max_installment"/>
+
+                                <field name="requested_installment"/>
+                                <field name="requested_amount"/>
+
+                                <field name="approved_installment"/>
+                                <field name="approved_amount"/>
+                                <field name="last_loan_amount"/>
+                                <field name="last_loan_date"/>
+
+                            </group>
+                        </group>
+
+
+                        <notebook>
+                            <page string="Payment Information" attrs="{'invisible':[('state','!=','paid')]}">
+                                <group>
+                                    <field name="paid_installment"/>
+                                    <field name="paid_installment_amount"/>
+                                    <field name="remaining_installment"/>
+                                    <field name="remaining_installment_amount"/>
+                                </group>
+                            </page>
+
+                            <page string="Guarantors">
+                                <field name="guarantor_ids">
+                                    <tree editable='bottom'>
+                                        <field name="guarantor_id"/>
+                                        <field name="guarantor_for"/>
+                                        <field name="contract_type"/>
+                                        <field name="line_manager_id"/>
+                                        <field name="state" widget='selection' decoration-success="state == 'approved'"
+                                               decoration-danger="state == 'rejected'"
+                                               decoration-info="state == 'draft'"/>
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="Guarantee Cheque">
+                                <group>
+                                    <group>
+                                        <field name="guarantee_cheque_bank"/>
+                                        <field name="guarantee_cheque_bank_branch"/>
+                                        <field name="guarantee_cheque_serial"/>
+                                        <field name="guarantee_cheque_amount"/>
+                                    </group>
+                                    <group>
+                                        <field name="guarantee_cheque_return"/>
+                                        <field name="guarantee_cheque_return_date"
+                                               attrs="{'invisible':[('check_cheque_returned','=',False)]}"/>
+                                    </group>
+
+
+                                </group>
+                            </page>
+                            <page string="Attachments">
+                                <field name="attachment_ids">
+                                    <tree>
+                                        <field name="name"/>
+                                        <field name="datas_fname"/>
+                                        <field name="document_type"/>
+
+                                        <!-- <field name="create_uid" />
+                                        <field name="create_date" /> -->
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="Approval Information">
+                                <group>
+                                    <field name="welfare_review_reject_date"/>
+                                    <field name="welfare_review_approve_date"/>
+
+                                </group>
+                                <group>
+                                    <field name="lm_reject_date"/>
+                                    <field name="lm_approve_date"/>
+                                </group>
+                                <group>
+                                    <field name="hr_reject_date"/>
+                                    <field name="hr_approve_date"/>
+                                </group>
+                                <group>
+                                    <field name="cheque_reject_date"/>
+                                    <field name="cheque_approve_date"/>
+                                </group>
+                                <group>
+                                    <field name="treasury_reject_date"/>
+                                    <field name="treasury_approve_date"/>
+                                </group>
+                            </page>
+                            <page string="Comments">
+                                <group cols="4">
+                                    <field name="hr_comment"/>
+                                    <newline/>
+                                    <field name="welfare_rejection_comments"
+                                           attrs="{'readonly':['|',('state','!=','welfare_review'),('check_access_right_welfare_admin','=',False)]}"/>
+                                    <newline/>
+
+                                    <field name="lm_rejection_comments"/>
+                                    <newline/>
+
+                                    <field name="hr_rejection_comments"/>
+                                    <newline/>
+
+                                    <field name="cheque_rejection_comments"/>
+                                    <newline/>
+
+                                    <field name="treasury_rejection_comments"/>
+
+
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids" widget="mail_followers" groups="base.group_user"/>
+                        <field name="message_ids" widget="mail_thread"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+        <record id="guarantor_view_form" model="ir.ui.view">
+            <field name="name">guarantor.view.form</field>
+            <field name="model">loan.guarantor</field>
+            <field name="arch" type="xml">
+                <form string='Guarantor'>
+                    <header>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="draft,wf_guarantor_approve,wf_lm_approve,approved,closed,rejected"/>
+
+                        <button name="button_guarantor_approve" string="Approve" type="object"
+                                attrs="{'invisible':['|',('state','!=','wf_guarantor_approve'),('check_access_loan_guarantor','=',False)]}"
+                                class="oe_highlight" widget="statinfo"/>
+                        <button name="button_guarantor_reject" string="Reject" type="object"
+                                attrs="{'invisible':['|',('state','!=','wf_guarantor_approve'),('check_access_loan_guarantor','=',False)]}"
+                                class="btn btn-danger" widget="statinfo"/>
+                        <button name="button_lm_approve" string="Approve" type="object"
+                                class="oe_highlight"
+                                attrs="{'invisible':['|',('state','!=','wf_lm_approve'),('check_access_right_line','=',False)]}"
+                                groups="ext_hr_employee.group_line_manager,loan.group_loan_admin,loan.group_welfare_approver"/>
+                        <button name="button_lm_reject" string="Reject" type="object"
+                                class="btn btn-danger"
+                                attrs="{'invisible':['|',('state','!=','wf_lm_approve'),('check_access_right_line','=',False)]}"
+                                groups="ext_hr_employee.group_line_manager,loan.group_loan_admin,loan.group_welfare_approver"/>
+
+                    </header>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="check_access_right_line" invisible="1"/>
+                                <field name="check_access_loan_guarantor" invisible="1"/>
+
+                                <field name="guarantor_id"
+                                       options="{'no_create': True, 'no_edit': True,'no_open': True}" readonly="1"/>
+                                <field name="guarantor_for"
+                                       options="{'no_create': True, 'no_edit': True,'no_open': True}"/>
+                                <field name="line_manager_id"/>
+                                <field name="loan_amount"/>
+                                <field name="loan_installments"/>
+
+                            </group>
+
+                        </group>
+
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids" widget="mail_followers" groups="base.group_user"/>
+                        <field name="message_ids" widget="mail_thread"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+        <record id="loan_installment_view_form" model="ir.ui.view">
+            <field name="name">loan.installment.view.form</field>
+            <field name="model">loan.installment</field>
+            <field name="arch" type="xml">
+                <form string='Loan Installment'>
+                    <header>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="draft,publish"/>
+
+
+                        <button name="button_publish" string="Publish" type="object"
+                                confirm="Are you sure you want to Publish installments ? (In publish state you can not Edit or Delete the installment lines!)"
+                                states="draft"
+                                class="oe_highlight" widget="statinfo"/>
+
+                    </header>
+                    <sheet>
+                        <group>
+                            <group>
+
+                                <field name="pay_period_id"
+                                       options="{'no_create': True, 'no_edit': True,'no_open': True}"/>
+                            </group>
+
+
+                        </group>
+                        <group>
+                            <notebook>
+                                <page string="Employees">
+                                    <div>
+                                        <button name="button_fetch_employees" string="Fetch Employees" type="object"
+                                                states="draft" class="oe_highlight" widget="statinfo"
+                                                style="margin-right:10px;"/>
+
+                                        <button name="button_calculate_installments" string="Calculate Installments"
+                                                type="object"
+                                                states="draft"
+                                                class="oe_highlight" widget="statinfo"/>
+                                    </div>
+                                    <group>
+                                        <field name="employee_ids"
+                                               options="{'limit':10,'no_create': True, 'no_edit': True,'no_open': True}">
+                                            <tree editable="bottom">
+                                                <field name="staff_id"/>
+                                                <field name="persian_first_name"/>
+                                                <field name="persian_last_name"/>
+                                            </tree>
+                                        </field>
+                                    </group>
+
+
+                                </page>
+                                <page string="Installment Lines">
+                                    <group>
+                                        <field name="installment_line_ids"
+                                               options="{'no_create': True, 'no_edit': True,'no_open': True}">
+                                            <tree editable="bottom">
+                                                <field name="employee_id"/>
+                                                <field name="pay_period_id"/>
+                                                <field name="installment_amount"/>
+                                                <field name="loan_request_id" invisible="1"/>
+                                                <field name="state"/>
+
+                                            </tree>
+                                        </field>
+                                    </group>
+                                </page>
+                            </notebook>
+                        </group>
+
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+
+        <record id="loan_guarantor_view_tree" model="ir.ui.view">
+            <field name="name">loan.guarantor.tree</field>
+            <field name="model">loan.guarantor</field>
+            <field name="arch" type="xml">
+                <tree string='Loan'>
+                    <field name="guarantor_id"/>
+                    <field name="guarantor_for"/>
+                    <field name="state"/>
+
+                </tree>
+            </field>
+        </record>
+
+        <record id="loan_installment_view_tree" model="ir.ui.view">
+            <field name="name">loan.installment.tree</field>
+            <field name="model">loan.installment</field>
+            <field name="arch" type="xml">
+                <tree string='Loan Installment'>
+                    <field name="name"/>
+                    <field name="pay_period_id"/>
+                    <field name="state"/>
+
+                </tree>
+            </field>
+        </record>
+
+        <record id="loan_view_action" model="ir.actions.act_window">
+            <field name="name">Loan Requests</field>
+            <field name="res_model">loan.request</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <record id="guarantor_view_action" model="ir.actions.act_window">
+            <field name="name">Guarantors</field>
+            <field name="res_model">loan.guarantor</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">['|',('line_manager_id.user_id', '=', uid), ('guarantor_id.user_id', '=', uid)]</field>
+
+        </record>
+                <record id="all_guarantor_view_action" model="ir.actions.act_window">
+            <field name="name">All Guarantors</field>
+            <field name="res_model">loan.guarantor</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+
+        </record>
+
+        <record id="loan_configuration_view_action" model="ir.actions.act_window">
+            <field name="name">Loan Configurations</field>
+            <field name="res_model">loan.config</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <record id="loan_type_view_action" model="ir.actions.act_window">
+            <field name="name">Loan Types</field>
+            <field name="res_model">loan.type</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <record id="view_loan_document_form" model="ir.ui.view">
+            <field name="model">loan.document</field>
+            <field name="arch" type="xml">
+                <form string="Attachments">
+                    <sheet>
+                        <label for="name" class="oe_edit_only"/>
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                        <group>
+                            <group>
+                                <field name="type"/>
+                                <field name="datas" filename="datas_fname" attrs="{'invisible':[('type','=','url')]}"/>
+                                <field name="datas_fname" invisible="1" attrs="{'invisible':[('type','=','url')]}"
+                                       class="oe_inline oe_right"/>
+                                <field name="url" widget="url" attrs="{'invisible':[('type','=','binary')]}"/>
+                                <field name="mimetype" groups="base.group_no_one"/>
+                                <field name="document_type"/>
+                            </group>
+
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="loan_installment_view_action" model="ir.actions.act_window">
+            <field name="name">Loan Installment</field>
+            <field name="res_model">loan.installment</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+
+        <menuitem
+                id="loan_main_menu"
+                name="Loan"
+                groups="group_requester_loan,group_welfare_approver"
+                action="loan_view_action"/>
+
+        <menuitem
+                id="loan_sub_menu"
+                parent="loan_main_menu"
+                name="Loan"
+                sequence="1"
+                groups="group_requester_loan,group_welfare_approver"
+                action="loan_view_action"/>
+
+        <menuitem
+                id="loan_request_sub_menu"
+                parent="loan_sub_menu"
+                name="Loan Request"
+                sequence="2"
+                groups="group_requester_loan,group_welfare_approver"
+                action="loan_view_action"/>
+
+        <menuitem
+                id="guarantor_main_menu"
+                name="Guarantors"
+                parent="loan_sub_menu"
+                sequence="10"
+                action="guarantor_view_action"/>
+
+        <menuitem
+                id="loan_configuration_menu"
+                name="Configurations"
+                groups="ext_hr_employee.group_configuration_creator"
+                parent="loan_main_menu"
+                sequence="11"/>
+
+        <!--        <menuitem-->
+        <!--                id="loan_configuration_sub_menu"-->
+        <!--                name="Configuration"-->
+        <!--                action="loan_configuration_view_action"-->
+        <!--                groups="ext_hr_employee.group_configuration_creator"-->
+        <!--                parent="loan_configuration_menu"-->
+        <!--                sequence="10"/>-->
+
+        <menuitem
+                id="loan_type_menu"
+                name="Loan Types"
+                action="loan_type_view_action"
+                groups="ext_hr_employee.group_configuration_creator"
+                parent="loan_configuration_menu"
+                sequence="10"/>
+
+        <menuitem
+                id="loan_installment_menu"
+                name="Loan Installment"
+                action="loan_installment_view_action"
+                groups="group_welfare_approver,group_loan_admin"
+                parent="loan_sub_menu"
+                sequence="10"/>
+        <menuitem
+                id="all_guarantor_main_menu"
+                name="All Guarantors"
+                parent="loan_sub_menu"
+                groups="group_loan_admin"
+                action="all_guarantor_view_action"/>
+
+
+    </data>
+</odoo>

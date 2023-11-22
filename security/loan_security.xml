@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record model="ir.module.category" id="module_loan_access_right">
+            <field name="name">Loan</field>
+        </record>
+        <record id="group_loan_admin" model="res.groups">
+            <field name="category_id" ref="module_loan_access_right"/>
+            <field name="name">Loan Admin</field>
+        </record>
+
+        <record id="group_welfare_approver" model="res.groups">
+            <field name="category_id" ref="module_loan_access_right"/>
+            <field name="name">Welfare Approver</field>
+        </record>
+
+        <record id="group_hr_welfare_approver" model="res.groups">
+            <field name="category_id" ref="module_loan_access_right"/>
+            <field name="name">HR Welfare Approver</field>
+        </record>
+
+        <record id="group_requester_loan" model="res.groups">
+            <field name="category_id" ref="module_loan_access_right"/>
+            <field name="name">Requester</field>
+        </record>
+
+        <record id="group_treasury_loan" model="res.groups">
+            <field name="category_id" ref="module_loan_access_right"/>
+            <field name="name">Treasury Approver</field>
+        </record>
+
+        <record id="group_loan_viewer" model="res.groups">
+            <field name="category_id" ref="module_loan_access_right"/>
+            <field name="name">Loan Viewer</field>
+        </record>
+        <record id="rule_loan_viewer" model="ir.rule">
+            <field name="name">Rule Loan Viewer</field>
+            <field name="model_id" ref="model_loan_request"/>
+            <field name="domain_force">[(1,'=',1)]</field>
+            <field name="groups" eval="[(4, ref('group_loan_viewer'))]"/>
+        </record>
+        <record id="rule_treasury_approver" model="ir.rule">
+            <field name="name">Rule Treasury Approver</field>
+            <field name="model_id" ref="model_loan_request"/>
+            <field name="domain_force">
+                ['|',('state','in',('welfare_review','wait_for_cheque','wait_for_cheque_received','wait_for_treasury','paid')),('create_uid','=',user.id)]
+            </field>
+            <field name="groups" eval="[(4, ref('loan.group_treasury_loan'))]"/>
+        </record>
+
+        <record id="rule_welfare_approver" model="ir.rule">
+            <field name="name">Rule Welfare Approver</field>
+            <field name="model_id" ref="model_loan_request"/>
+            <field name="domain_force">[(1,'=',1)]</field>
+
+            <!--            <field name="domain_force">-->
+            <!--                ['|',('state','in',('wait_for_hr','wait_for_guarantor','welfare_review','wait_for_lm','wait_for_cheque','wait_for_cheque_received','wait_for_treasury','rejected')),('create_uid','=',user.id)]-->
+            <!--            </field>-->
+            <field name="groups" eval="[(4, ref('loan.group_welfare_approver'))]"/>
+        </record>
+
+        <record id="rule_hr_welfare_approver" model="ir.rule">
+            <field name="name">Rule HR Welfare Approver</field>
+            <field name="model_id" ref="model_loan_request"/>
+            <field name="domain_force">[('state','in',('wait_for_hr','wait_for_cheque'))]</field>
+            <field name="groups" eval="[(4, ref('loan.group_hr_welfare_approver'))]"/>
+        </record>
+
+        <record id="rule_loan_requester" model="ir.rule">
+            <field name="name">Loan Requester Rule</field>
+            <field name="model_id" ref="model_loan_request"/>
+            <field name="domain_force">[('requester_id.user_id', '=', user.id)]
+            </field>
+            <!--                        <field name="domain_force">['|', ('requester_id.user_id', '=', user.id), '&amp;', ('guarantor_user_ids',-->
+            <!--                            '=', user.id)]-->
+            <!--                        </field>-->
+            <field name="groups" eval="[(4,ref('loan.group_requester_loan'))]"/>
+        </record>
+
+        <record id="rule_loan_line_manager" model="ir.rule">
+            <field name="name">Loan Line Manager</field>
+            <field ref="model_loan_request" name="model_id"/>
+            <field name="domain_force">[('line_manager.user_id','=',user.id)]</field>
+            <field name="groups" eval="[(4,ref('ext_hr_employee.group_line_manager'))]"/>
+        </record>
+
+        <record id="rule_loan_request_admin" model="ir.rule">
+            <field name="name">Rule Loan Request Admin</field>
+            <field name="model_id" ref="model_loan_request"/>
+            <field name="domain_force">[(1,'=',1)]</field>
+            <field name="groups" eval="[(4, ref('group_loan_admin'))]"/>
+        </record>
+
+        <record id="rule_loan_guarantor_admin" model="ir.rule">
+            <field name="name">Rule Loan Guarantor Admin</field>
+            <field name="model_id" ref="model_loan_guarantor"/>
+            <field name="domain_force">[(1,'=',1)]</field>
+            <field name="groups" eval="[(4, ref('group_loan_admin'))]"/>
+        </record>
+        <record id="rule_loan_installment_admin" model="ir.rule">
+            <field name="name">Rule Loan Installment Admin</field>
+            <field name="model_id" ref="model_loan_installment"/>
+            <field name="domain_force">[(1,'=',1)]</field>
+            <field name="groups" eval="[(4, ref('group_loan_admin'))]"/>
+        </record>
+
+        <record id="rule_loan_installment_line_admin" model="ir.rule">
+            <field name="name">Rule Loan Installment Line Admin</field>
+            <field name="model_id" ref="model_loan_installment_line"/>
+            <field name="domain_force">[(1,'=',1)]</field>
+            <field name="groups" eval="[(4, ref('group_loan_admin'))]"/>
+        </record>
+
+
+        <record id="rule_loan_guarantor" model="ir.rule">
+            <field name="name">Loan Guarantor Rule</field>
+            <field name="model_id" ref="model_loan_guarantor"/>
+            <field name="domain_force">['|',('guarantor_id.user_id', '=', user.id),('loan_id.requester_id.user_id', '=',
+                user.id)]
+            </field>
+            <field name="groups" eval="[(4,ref('loan.group_requester_loan'))]"/>
+        </record>
+
+        <record id="rule_loan_guarantor_hr" model="ir.rule">
+            <field name="name">Loan Guarantor Rule HR</field>
+            <field name="model_id" ref="model_loan_guarantor"/>
+            <field name="domain_force">[(1,'=',1)]
+            </field>
+            <field name="groups" eval="[(4,ref('loan.group_hr_welfare_approver'))]"/>
+        </record>
+        <record id="rule_loan_guarantor_welfare" model="ir.rule">
+            <field name="name">Loan Guarantor Rule Welfare</field>
+            <field name="model_id" ref="model_loan_guarantor"/>
+            <field name="domain_force">[(1,'=',1)]
+            </field>
+            <field name="groups" eval="[(4,ref('loan.group_welfare_approver'))]"/>
+        </record>
+
+        <record id="rule_loan_guarantor_treasury" model="ir.rule">
+            <field name="name">Loan Guarantor Rule Treasury</field>
+            <field name="model_id" ref="model_loan_guarantor"/>
+            <field name="domain_force">[(1,'=',1)]
+            </field>
+            <field name="groups" eval="[(4,ref('loan.group_treasury_loan'))]"/>
+        </record>
+        <record id="rule_loan_guarantor_lm" model="ir.rule">
+            <field name="name">Loan Guarantor Rule Line Manager</field>
+            <field name="model_id" ref="model_loan_guarantor"/>
+            <field name="domain_force">[(1,'=',1)]
+
+            </field>
+            <!--                    <field name="domain_force">[ '|',('line_manager_id.user_id','=',user.id),-->
+            <!--                        ('state', '=', 'wf_lm_approve'),'|',('loan_id.line_manager.user_id','=',user.id),-->
+            <!--                        ('loan_id.state', '=', 'wait_for_lm')]-->
+            <!--                    </field>-->
+            <field name="groups" eval="[(4,ref('ext_hr_employee.group_line_manager'))]"/>
+        </record>
+
+        <!--        <record id="rule_loan_guarantor_lm" model="ir.rule">-->
+        <!--            <field name="name">Loan Guarantor Rule Line Manager</field>-->
+        <!--            <field name="model_id" ref="model_loan_guarantor"/>-->
+        <!--            <field name="domain_force">[ '|',('line_manager_id.user_id','=',user.id),-->
+        <!--                ('state', '=', 'wf_lm_approve')]-->
+        <!--            </field>-->
+        <!--            &lt;!&ndash;                    <field name="domain_force">[ '|',('line_manager_id.user_id','=',user.id),&ndash;&gt;-->
+        <!--            &lt;!&ndash;                        ('state', '=', 'wf_lm_approve'),'|',('loan_id.line_manager.user_id','=',user.id),&ndash;&gt;-->
+        <!--            &lt;!&ndash;                        ('loan_id.state', '=', 'wait_for_lm')]&ndash;&gt;-->
+        <!--            &lt;!&ndash;                    </field>&ndash;&gt;-->
+        <!--            <field name="groups" eval="[(4,ref('ext_hr_employee.group_line_manager'))]"/>-->
+        <!--        </record>-->
+
+
+    </data>
+</odoo>
